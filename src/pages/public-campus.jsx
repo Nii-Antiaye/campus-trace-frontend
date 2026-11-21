@@ -1,5 +1,9 @@
-import { useState } from "react"
-import { Form, Link, NavLink, Outlet, useParams, useSearchParams } from "react-router"
+import { useEffect, useRef, useState } from "react"
+import marquee from "@/vendor/taste/moment"
+import { still, clamp, fontsReady } from "@/vendor/taste/lib"
+import "@/vendor/taste/motion.css"
+import "@/vendor/taste/moment.css"
+import { Link, NavLink, Outlet, useLocation, useParams, useSearchParams } from "react-router"
 import { ArrowUpRight, Check, MapPin, Search, Tag, Waypoints } from "lucide-react"
 import useSWR from "swr"
 import { api, apiErrorMessage } from "@/api/api"
@@ -10,34 +14,52 @@ const categories = ["Bags", "Clothing", "Electronics", "ID and cards", "Keys", "
 const prettyDate = value => new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
 
 export function PublicCampus() {
+    const { pathname } = useLocation()
+    const [menuPath,setMenuPath] = useState(null)
+    const menuOpen = menuPath === pathname
     return <div className="campus">
         <a className="campus-skip" href="#public-main">Skip to content</a>
         <header className="campus-nav"><Link to="/" className="campus-brand"><img src={logo} alt="" />Campus Trace</Link>
-            <nav aria-label="Public navigation">{[["/item","Found items"],["/report-lost","Report lost"],["/report-found","Report found"],["/guidelines","Pickup guide"]].map(([url,label]) =>
-                <NavLink key={url} to={url}>{label}</NavLink>)}</nav>
+            <button className="campus-menu" aria-controls="campus-links" aria-expanded={menuOpen} onClick={() => setMenuPath(menuOpen ? null : pathname)}>Menu</button>
+            <nav id="campus-links" data-open={menuOpen} aria-label="Public navigation">{[["/item","Found items"],["/report-lost","Report lost"],["/report-found","Report found"],["/guidelines","Pickup guide"]].map(([url,label]) =>
+                <NavLink key={url} to={url} onClick={() => setMenuPath(null)}>{label}</NavLink>)}</nav>
         </header>
-        <main id="public-main" className="campus-main"><Outlet /></main>
+        <main id="public-main" className="campus-main wrap"><Outlet /></main>
         <footer className="campus-footer"><span>Campus Trace · Lost property desk</span><Link to="/admin/login">Staff sign-in</Link></footer>
     </div>
 }
 
 export function CampusHome() {
+    const rail = useRef(null)
+    useEffect(() => {
+        const instance = marquee(rail.current, { speed: 20, gap: 42 }, { reduced: still, clamp, fontsReady })
+        return () => instance.destroy?.()
+    }, [])
+    const [query,setQuery] = useState("")
+    const { data,error,mutate } = useSWR("/public/items")
+    const matches = data?.filter(item => [item.title,item.location_found,item.category].join(" ").toLowerCase().includes(query.trim().toLowerCase()))
     return <>
-        <section className="campus-hero">
-            <div><h1>Lost something<br />on campus?</h1>
-                <p>Search the items handed in at the desk, or tell us what’s missing.</p>
-                <Form method="get" action="/item" className="campus-search"><Search aria-hidden="true" size={20} />
-                    <input name="q" aria-label="Search found items" placeholder="Try a backpack, keys or a location" /><button>Search</button>
-                </Form>
-                <Link to="/item">Browse all found items</Link>
+        <section className="campus-hero hero--split" data-enter>
+            <div><h1>The campus<br />lost property desk.</h1>
+                <p>Every listing is an item staff have physically received. Search the desk’s register, or leave a description of what’s missing. No account needed.</p>
+                <Link className="campus-primary" to="/report-lost">Report a lost item <ArrowUpRight size={18}/></Link>
             </div>
-            <div className="campus-tag" aria-hidden="true"><i /><Tag size={42} strokeWidth={1.4}/><strong>Lost property</strong><span>Campus Trace</span><b /></div>
+            <div className="desk-register hero__visual app-frame" role="region" aria-label="Search found items">
+                <div className="register-top"><Tag size={22}/><strong>Found at the desk</strong></div>
+                <label className="register-search"><Search size={18}/><input type="search" value={query} onChange={e => setQuery(e.target.value)} aria-label="Search found items" placeholder="Item, category or location"/></label>
+                {error || !matches ? <RequestState error={error} retry={mutate}/> : matches.length ?
+                    <ul>{matches.slice(0,3).map(item => <li key={item.id}><Link to={`/item/${item.id}`}><span><small>{item.category}</small><strong>{item.title}</strong><span>{item.location_found}</span></span><ArrowUpRight size={18}/></Link></li>)}</ul>
+                    : <p role="status">{query ? "No matching items. Try another name or location." : "No items have been published yet."}</p>}
+                <Link className="register-all" to={query ? `/item?q=${encodeURIComponent(query)}` : "/item"}>Open the catalogue <ArrowUpRight size={16}/></Link>
+            </div>
         </section>
-        <div className="campus-paths">{[
+        <section className="campus-directory"><h2>Reports and collection</h2><div className="campus-paths">{[
             ["/report-lost","Report a lost item","Leave a description and a way for the desk to reach you."],
             ["/report-found","Hand in a found item","Tell the desk what you found before bringing it in."],
             ["/guidelines","Collect your item","Find out how ownership checks and pickup work."],
-        ].map(([url,title,text]) => <Link key={url} to={url}><ArrowUpRight aria-hidden="true" /><h2>{title}</h2><p>{text}</p></Link>)}</div>
+        ].map(([url,title,text]) => <Link key={url} to={url}><h3>{title}</h3><p>{text}</p><ArrowUpRight aria-hidden="true" /></Link>)}</div>
+            <div ref={rail} data-moment="marquee-row" className="category-rail"><ul aria-label="Item categories" className="mo-mq__track">{categories.map(category => <li key={category}>{category}</li>)}</ul></div>
+        </section>
     </>
 }
 
