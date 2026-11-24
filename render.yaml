@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: campus-trace
+    name: campus-trace-carmilla
     runtime: static
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
     staticPublishPath: ./dist
