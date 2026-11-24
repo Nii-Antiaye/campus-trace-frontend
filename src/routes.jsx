@@ -15,7 +15,7 @@ import { LostReports } from "@/pages/lost-reports"
 import { Notifications } from "@/pages/notifications"
 import { ReturnedItems } from "@/pages/returned-items"
 import { QrCodes } from "@/pages/qr-codes"
-import { PublicCampus, CampusHome, ReportForm, Catalogue, ItemDetails, Guidelines } from "@/pages/public-campus"
+import { PublicCampus, CampusHome, ReportForm, Catalogue, ItemDetails, LostCatalogue, LostItemDetails, Guidelines } from "@/pages/public-campus"
 
 export const appRoutes = createBrowserRouter([
     {
@@ -32,6 +32,8 @@ export const appRoutes = createBrowserRouter([
                 { path: "report-found", element: <ReportForm key="found" found /> },
                 { path: "item", element: <Catalogue /> },
                 { path: "item/:itemId", element: <ItemDetails /> },
+                { path: "lost-items", element: <LostCatalogue /> },
+                { path: "lost-items/:reportId", element: <LostItemDetails /> },
                 { path: "guidelines", element: <Guidelines /> },
             ] },
             { path: "admin/login", element: <Login /> },

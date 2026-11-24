@@ -21,7 +21,7 @@ export function PublicCampus() {
         <a className="campus-skip" href="#public-main">Skip to content</a>
         <header className="campus-nav"><Link to="/" className="campus-brand"><img src={logo} alt="" />Campus Trace</Link>
             <button className="campus-menu" aria-controls="campus-links" aria-expanded={menuOpen} onClick={() => setMenuPath(menuOpen ? null : pathname)}>Menu</button>
-            <nav id="campus-links" data-open={menuOpen} aria-label="Public navigation">{[["/item","Found items"],["/report-lost","Report lost"],["/report-found","Report found"],["/guidelines","Pickup guide"]].map(([url,label]) =>
+            <nav id="campus-links" data-open={menuOpen} aria-label="Public navigation">{[["/item","Found items"],["/lost-items","Lost items"],["/report-lost","Report lost"],["/report-found","Report found"],["/guidelines","Pickup guide"]].map(([url,label]) =>
                 <NavLink key={url} to={url} onClick={() => setMenuPath(null)}>{label}</NavLink>)}</nav>
         </header>
         <main id="public-main" className="campus-main wrap"><Outlet /></main>
@@ -54,6 +54,7 @@ export function CampusHome() {
             </div>
         </section>
         <section className="campus-directory"><h2>Reports and collection</h2><div className="campus-paths">{[
+            ["/lost-items","See what people are looking for","Check active lost-item searches and help an item find its owner."],
             ["/report-lost","Report a lost item","Leave a description and a way for the desk to reach you."],
             ["/report-found","Hand in a found item","Tell the desk what you found before bringing it in."],
             ["/guidelines","Collect your item","Find out how ownership checks and pickup work."],
@@ -63,9 +64,9 @@ export function CampusHome() {
     </>
 }
 
-function RequestState({ error, retry }) {
-    return error ? <div role="alert"><p>{apiErrorMessage(error, "We couldn’t load the catalogue. Try again.")}</p><button className="campus-secondary" onClick={() => retry()}>Try again</button></div>
-        : <p role="status">Loading found items…</p>
+function RequestState({ error, retry, loading = "Loading found items…", fallback = "We couldn’t load the catalogue. Try again." }) {
+    return error ? <div role="alert"><p>{apiErrorMessage(error, fallback)}</p><button className="campus-secondary" onClick={() => retry()}>Try again</button></div>
+        : <p role="status">{loading}</p>
 }
 
 export function Catalogue() {
@@ -87,6 +88,36 @@ export function Catalogue() {
             <span><small>{item.category}</small><strong>{item.title}</strong><span>{item.location_found} · {prettyDate(item.found_at)}</span></span><ArrowUpRight /></Link></li>)}</ul>
             : <p>No items {query || category ? "match these filters." : "are currently listed."} <Link to="/report-lost">Report a missing item</Link></p>}
     </section>
+}
+
+export function LostCatalogue() {
+    const { data, error, mutate } = useSWR("/public/lost-items")
+    const [params, setParams] = useSearchParams()
+    const query = params.get("q") || ""
+    const category = params.get("category") || ""
+    function filter(key, value) {
+        const next = new URLSearchParams(params)
+        if (value) next.set(key,value); else next.delete(key)
+        setParams(next,{ replace:true })
+    }
+    const rows = data?.filter(report => (!category || report.category === category) && [report.item_name,report.category,report.last_seen_location,report.description].join(" ").toLowerCase().includes(query.trim().toLowerCase()))
+    return <section><h1>Lost items</h1><p className="campus-intro">These items are still being searched for. If you have seen one, open the report and tell the desk what you found.</p>
+        <div className="campus-filters"><label>Search active reports<input type="search" value={query} onChange={e => filter("q",e.target.value)} placeholder="Item or last-seen location" /></label>
+            <label>Category<select value={category} onChange={e => filter("category",e.target.value)}><option value="">All categories</option>{[...new Set([...(data || []).map(report => report.category), ...(category ? [category] : [])])].sort().map(c => <option key={c}>{c}</option>)}</select></label></div>
+        {error || !rows ? <RequestState error={error} retry={mutate} loading="Loading lost items…" fallback="We couldn’t load active lost-item searches. Try again."/> : rows.length ? <ul className="campus-list">{rows.map(report => <li key={report.id}><Link to={`/lost-items/${report.id}`}>
+            <span className="campus-thumb"><Search /></span>
+            <span><small>{report.category}</small><strong>{report.item_name}</strong><span>Last seen: {report.last_seen_location}{report.lost_at ? ` · ${prettyDate(report.lost_at)}` : ""}</span></span><ArrowUpRight /></Link></li>)}</ul>
+            : <p>No lost items {query || category ? "match these filters." : "are currently being searched for."} <Link to="/report-lost">Report a missing item</Link></p>}
+    </section>
+}
+
+export function LostItemDetails() {
+    const { reportId } = useParams()
+    const { data:report,error,mutate } = useSWR(reportId ? `/public/lost-items/${reportId}` : null)
+    return <section><Link to="/lost-items">Back to lost items</Link>{error || !report ? <RequestState error={error} retry={mutate} loading="Loading lost item…" fallback="We couldn’t load this lost-item search."/> : <div className="campus-split campus-detail"><div>
+        <small>{report.category}</small><h1>{report.item_name}</h1><p className="campus-intro">{report.description}</p>
+        <p><strong>Last seen at {report.last_seen_location}</strong><br />{report.lost_at ? prettyDate(report.lost_at) : `Reported ${prettyDate(report.reported_at)}`}</p>
+        </div><aside><MapPin/><h2>Have you seen this item?</h2><p>Send a found report with where and when you found it. Keep the item safe until desk staff confirm the hand-in.</p><Link to="/report-found">Report it found</Link></aside></div>}</section>
 }
 
 function ContactFields() {
@@ -150,10 +181,10 @@ export function ReportForm({ found = false }) {
             <label>Category<select name="category" required defaultValue=""><option value="" disabled>Choose a category</option>{categories.map(c => <option key={c}>{c}</option>)}</select></label>
             <label>{found ? "Where did you find it?" : "Where did you last see it?"}<input name={found ? "location_found" : "last_seen_location"} maxLength={255} required /></label>
             <label>{found ? "When did you find it?" : "When did you last see it? (optional)"}<input type="datetime-local" name={found ? "found_at" : "lost_at"} required={found} /></label>
-            <label>Description<textarea name="description" maxLength={4000} required rows={3} /></label>
+            <label>Description<textarea name="description" maxLength={4000} required rows={3} />{!found && <small>This description will appear publicly while the search is active. Keep private proof of ownership out of it.</small>}</label>
             {found && <label>Photos (3–5, JPG/PNG/WebP, up to 5 MB each)<input type="file" name="images" accept="image/jpeg,image/png,image/webp" multiple required onChange={e => setFiles(Array.from(e.target.files || []))} /></label>}
         </fieldset><ContactFields />{error && <p role="alert">{error}</p>}<button disabled={busy}>{busy ? "Sending…" : `Send ${kind} report`}</button></form></div>
-        <aside><MapPin/><h2>{found ? "Keep it with you until hand-in" : "Already spotted your item?"}</h2><p>{found ? "Upload clear photos so staff can identify the item. Only items physically checked by the desk appear in the catalogue." : "Open its catalogue listing to answer the ownership questions. Filing a lost report alone does not reserve it."}</p><Link to={found ? "/guidelines" : "/item"}>{found ? "Read the pickup guide" : "Browse found items"}</Link></aside>
+        <aside><MapPin/><h2>{found ? "Keep it with you until hand-in" : "Already spotted your item?"}</h2><p>{found ? "Upload clear photos so staff can identify the item. Only items physically checked by the desk appear in the catalogue." : "Open its catalogue listing to answer the ownership questions. Filing a lost report alone does not reserve it."}</p><Link to={found ? "/guidelines" : "/item"}>{found ? "Read the pickup guide" : "Browse found items"}</Link>{!found && <Link to="/lost-items">View active lost searches</Link>}</aside>
     </section>
 }
 
