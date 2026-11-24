@@ -14,6 +14,7 @@ import { LostReportDetails } from "@/pages/lost-report-details"
 import { LostReports } from "@/pages/lost-reports"
 import { Notifications } from "@/pages/notifications"
 import { ReturnedItems } from "@/pages/returned-items"
+import { QrCodes } from "@/pages/qr-codes"
 import { PublicCampus, CampusHome, ReportForm, Catalogue, ItemDetails, Guidelines } from "@/pages/public-campus"
 
 export const appRoutes = createBrowserRouter([
@@ -47,6 +48,7 @@ export const appRoutes = createBrowserRouter([
                     { path: "claims/:claimId", element: <ClaimDetails /> },
                     { path: "administrators", element: <Administrator /> },
                     { path: "returned", element: <ReturnedItems /> },
+                    { path: "qr-codes", element: <QrCodes /> },
                     { path: "notifications", element: <Notifications /> },
                     { path: "logs", element: <ActivityLogs /> },
                 ],

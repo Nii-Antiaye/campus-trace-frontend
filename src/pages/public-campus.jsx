@@ -83,7 +83,7 @@ export function Catalogue() {
         <div className="campus-filters"><label>Search the catalogue<input type="search" value={query} onChange={e => filter("q",e.target.value)} placeholder="Item or location" /></label>
             <label>Category<select value={category} onChange={e => filter("category",e.target.value)}><option value="">All categories</option>{[...new Set([...(data || []).map(item => item.category), ...(category ? [category] : [])])].sort().map(c => <option key={c}>{c}</option>)}</select></label></div>
         {error || !rows ? <RequestState error={error} retry={mutate}/> : rows.length ? <ul className="campus-list">{rows.map(item => <li key={item.id}><Link to={`/item/${item.id}`}>
-            <span className="campus-thumb">{item.image_url ? <img src={item.image_url} alt="" loading="lazy"/> : <Tag />}</span>
+            <span className="campus-thumb"><Tag /></span>
             <span><small>{item.category}</small><strong>{item.title}</strong><span>{item.location_found} · {prettyDate(item.found_at)}</span></span><ArrowUpRight /></Link></li>)}</ul>
             : <p>No items {query || category ? "match these filters." : "are currently listed."} <Link to="/report-lost">Report a missing item</Link></p>}
     </section>
@@ -104,11 +104,13 @@ function useSubmission() {
     async function send(url, payload) {
         if (busy) return
         setBusy(true); setError("")
-        try { const result = await api.post(url,payload); setReference(result.data.reference) }
-        catch (err) { setError(apiErrorMessage(err,"Couldn’t send this form. Your entries are still here; please try again.")) }
+        try {
+            const result = await api.post(url, payload)
+            setReference(result.data.reference)
+        } catch (err) { setError(apiErrorMessage(err, "Couldn’t send this form. Your entries are still here; please try again.")) }
         finally { setBusy(false) }
     }
-    return { busy,error,reference,send }
+    return { busy, error, reference, setError, send }
 }
 
 function Receipt({ title, reference, children }) {
@@ -116,25 +118,42 @@ function Receipt({ title, reference, children }) {
 }
 
 export function ReportForm({ found = false }) {
-    const { busy,error,reference,send } = useSubmission()
+    const { busy, error, reference, setError, send } = useSubmission()
     const kind = found ? "found" : "lost"
+    const [files, setFiles] = useState([])
     function submit(event) {
         event.preventDefault()
-        const payload = Object.fromEntries(new FormData(event.currentTarget))
-        const date = found ? "found_at" : "lost_at"
-        payload[date] = payload[date] ? new Date(payload[date]).toISOString() : null
-        send(`/public/reports/${kind}`, payload)
+        const form = event.currentTarget
+        if (found) {
+            if (files.length < 3 || files.length > 5) {
+                setError("Upload between 3 and 5 photos of the item (each up to 5 MB).")
+                return
+            }
+            if (files.some(file => file.size > 5 * 1024 * 1024)) {
+                setError("Each photo must be 5 MB or smaller.")
+                return
+            }
+            const fd = new FormData(form)
+            const dt = fd.get("found_at")
+            fd.set("found_at", dt ? new Date(dt).toISOString() : new Date().toISOString())
+            send("/public/reports/found", fd)
+            return
+        }
+        const payload = Object.fromEntries(new FormData(form))
+        payload.lost_at = payload.lost_at ? new Date(payload.lost_at).toISOString() : null
+        send("/public/reports/lost", payload)
     }
-    if (reference) return <Receipt title={`${found ? "Found" : "Lost"} report received`} reference={reference}>{found ? "Bring the item to the campus lost property desk. Staff will check it before publishing a listing." : "The desk has your description. You can also browse found items and submit a claim if you recognize yours."}</Receipt>
-    return <section className="campus-split"><div><h1>Report a {kind} item</h1><p className="campus-intro">{found ? "Tell the desk what you found and where you picked it up." : "Describe what’s missing and where you last remember having it."}</p>
+    if (reference) return <Receipt title={`${found ? "Found" : "Lost"} report received`} reference={reference}>{found ? "Bring the item to the campus lost property desk with your photos. Staff will check it before publishing a listing." : "The desk has your description. You can also browse found items and submit a claim if you recognize yours."}</Receipt>
+    return <section className="campus-split"><div><h1>Report a {kind} item</h1><p className="campus-intro">{found ? "Tell the desk what you found, when and where, and add 3 to 5 photos." : "Describe what’s missing and where you last remember having it."}</p>
         <form className="campus-form" onSubmit={submit}><fieldset><legend>Item details</legend>
             <label>Item name<input name="item_name" placeholder="e.g. Blue backpack" maxLength={200} required /></label>
             <label>Category<select name="category" required defaultValue=""><option value="" disabled>Choose a category</option>{categories.map(c => <option key={c}>{c}</option>)}</select></label>
             <label>{found ? "Where did you find it?" : "Where did you last see it?"}<input name={found ? "location_found" : "last_seen_location"} maxLength={255} required /></label>
             <label>{found ? "When did you find it?" : "When did you last see it? (optional)"}<input type="datetime-local" name={found ? "found_at" : "lost_at"} required={found} /></label>
             <label>Description<textarea name="description" maxLength={4000} required rows={3} /></label>
+            {found && <label>Photos (3–5, JPG/PNG/WebP, up to 5 MB each)<input type="file" name="images" accept="image/jpeg,image/png,image/webp" multiple required onChange={e => setFiles(Array.from(e.target.files || []))} /></label>}
         </fieldset><ContactFields />{error && <p role="alert">{error}</p>}<button disabled={busy}>{busy ? "Sending…" : `Send ${kind} report`}</button></form></div>
-        <aside><MapPin/><h2>{found ? "Keep it with you until hand-in" : "Already spotted your item?"}</h2><p>{found ? "A report lets staff know an item is on its way. Only items physically checked by the desk appear in the catalogue." : "Open its catalogue listing to answer the ownership questions. Filing a lost report alone does not reserve it."}</p><Link to={found ? "/guidelines" : "/item"}>{found ? "Read the pickup guide" : "Browse found items"}</Link></aside>
+        <aside><MapPin/><h2>{found ? "Keep it with you until hand-in" : "Already spotted your item?"}</h2><p>{found ? "Upload clear photos so staff can identify the item. Only items physically checked by the desk appear in the catalogue." : "Open its catalogue listing to answer the ownership questions. Filing a lost report alone does not reserve it."}</p><Link to={found ? "/guidelines" : "/item"}>{found ? "Read the pickup guide" : "Browse found items"}</Link></aside>
     </section>
 }
 
@@ -144,13 +163,14 @@ export function ItemDetails() {
 }
 
 function ClaimPage({ itemId }) {
-    const { data:item,error,mutate } = useSWR(`/public/items/${itemId}`)
+    const { data:item,error,mutate } = useSWR(itemId ? `/public/items/${itemId}` : null)
     const submission = useSubmission()
     function submit(event) {
         event.preventDefault()
+        if (!item) return
         const payload = Object.fromEntries(new FormData(event.currentTarget))
         const answers = {}
-        for (const q of item.questions) {
+        for (const q of item.questions || []) {
             const answer = payload[q.id]?.trim()
             if (answer) answers[q.id] = answer
             delete payload[q.id]
@@ -158,13 +178,13 @@ function ClaimPage({ itemId }) {
         submission.send(`/public/items/${itemId}/claims`,{ ...payload,answers })
     }
     if (submission.reference) return <Receipt title="Claim received" reference={submission.reference}>Staff will review your private answers. Wait for approval and pickup instructions before coming to collect the item.</Receipt>
+    const questions = item?.questions || []
     return <section><Link to="/item">Back to found items</Link>{error || !item ? <RequestState error={error} retry={mutate}/> : <div className="campus-split campus-detail"><div>
         <small>{item.category}</small><h1>{item.title}</h1><p className="campus-intro">{item.public_description}</p>
         <p><strong>Found at {item.location_found}</strong><br />{prettyDate(item.found_at)}</p>
-        {item.image_url && <img className="campus-photo" src={item.image_url} alt={item.title}/>}
         </div><form className="campus-form" onSubmit={submit}><fieldset><legend>Claim this item</legend><p>Give details only the owner would know. Only desk staff can read your answers.</p>
             <label>How can you identify it?<textarea name="claim_description" required maxLength={4000}/></label>
-            {item.questions.map(q => <label key={q.id}>{q.question}{!q.is_required && " (optional)"}<textarea name={q.id} required={q.is_required} maxLength={2000}/></label>)}
+            {questions.map(q => <label key={q.id}>{q.question}{!q.is_required && " (optional)"}<textarea name={q.id} required={q.is_required} maxLength={2000}/></label>)}
         </fieldset><ContactFields/>{submission.error && <p role="alert">{submission.error}</p>}<button disabled={submission.busy}>{submission.busy ? "Sending…" : "Send ownership claim"}</button></form></div>}</section>
 }
 

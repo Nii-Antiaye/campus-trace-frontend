@@ -3,7 +3,7 @@ import { ArrowLeft, PackageCheck, Send } from "lucide-react"
 import { Link, useParams } from "react-router"
 import useSWR from "swr"
 
-import { api, apiErrorMessage } from "@/api/api"
+import { api, apiAssetUrl, apiErrorMessage } from "@/api/api"
 import { AdminPageHeader, PageError, RecordField, StatusBadge } from "@/components/custom/admin-page"
 import { Button } from "@/components/ui/button"
 import { ConfirmWorkflowAction } from "@/components/custom/confirm-workflow-action"
@@ -44,7 +44,6 @@ export function FoundReportDetails() {
             await api.post(`/admin/reports/found/${reportId}/receive`, {
                 title: form.get("title"),
                 public_description: form.get("public_description"),
-                image_url: form.get("image_url") || null,
                 admin_notes: form.get("admin_notes") || null,
                 verification_questions: questions,
             })
@@ -91,7 +90,18 @@ export function FoundReportDetails() {
                         <RecordField label="Finder">{report.full_name}</RecordField>
                         <RecordField label="Email">{report.email}</RecordField>
                         <RecordField label="Phone">{report.phone_number}</RecordField>
-                        <RecordField label="Additional notes" className="sm:col-span-2">{report.additional_notes}</RecordField>
+                                        <RecordField label="Additional notes" className="sm:col-span-2">{report.additional_notes || "—"}</RecordField>
+                        {report.uploaded_images?.length > 0 && (
+                            <RecordField label="Submitted photos" className="sm:col-span-2">
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {report.uploaded_images.map((src) => (
+                                        <a key={src} href={apiAssetUrl(src)} target="_blank" rel="noreferrer" className="block w-24 h-24 border overflow-hidden">
+                                            <img src={apiAssetUrl(src)} alt="" className="w-full h-full object-cover" />
+                                        </a>
+                                    ))}
+                                </div>
+                            </RecordField>
+                        )}
                     </dl>
                 </div>
 
@@ -113,13 +123,9 @@ export function FoundReportDetails() {
                                     <FieldDescription>Do not expose private identifying details.</FieldDescription>
                                 </Field>
                                 <Field>
-                                    <FieldLabel htmlFor="image-url">Image URL</FieldLabel>
-                                    <Input id="image-url" name="image_url" type="url" placeholder="https://..." disabled={isWorking} />
-                                </Field>
-                                <Field>
                                     <FieldLabel htmlFor="questions">Private ownership questions</FieldLabel>
                                     <Textarea id="questions" name="verification_questions" placeholder={"What is engraved on the item?\nWhat was inside it?"} required disabled={isWorking} />
-                                    <FieldDescription>Enter one question per line about a detail only the owner would know. Keep the answers out of the public description.</FieldDescription>
+                                    <FieldDescription>Enter one question per line about a detail only the owner would know.</FieldDescription>
                                 </Field>
                                 <Field>
                                     <FieldLabel htmlFor="admin-notes">Internal notes</FieldLabel>
@@ -140,6 +146,11 @@ export function FoundReportDetails() {
                                 <RecordField label="Item status"><StatusBadge status={report.item?.status} /></RecordField>
                                 <RecordField label="Received">{formatDate(report.received_at)}</RecordField>
                                 <RecordField label="Received by">{report.received_by_name}</RecordField>
+                                {report.item?.image_urls?.length > 0 && (
+                                    <RecordField label="Photos">
+                                        <div className="mt-1 flex flex-wrap gap-2">{report.item.image_urls.map((u) => <a key={u} href={apiAssetUrl(u)} target="_blank" rel="noreferrer" className="block w-16 h-16 border overflow-hidden"><img src={apiAssetUrl(u)} alt="" className="w-full h-full object-cover" /></a>)}</div>
+                                    </RecordField>
+                                )}
                                 <RecordField label="Ownership questions">
                                     <ul className="list-disc pl-4">{report.item?.verification_questions?.map(q => <li key={q.id}>{q.question}</li>)}</ul>
                                 </RecordField>

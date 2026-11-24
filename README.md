@@ -1,19 +1,63 @@
-# React + Vite
+# Campus Trace
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Campus Trace is a public lost-property reporting and claim system with an authenticated administrator dashboard.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Backend
 
-## React Compiler
+From `../backend`:
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+```powershell
+workon p1
+uvicorn main:app --reload
+```
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+The API runs at `http://127.0.0.1:8000`.
 
-## Expanding the Oxlint configuration
+### Frontend
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+From this directory:
+
+```powershell
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+The frontend runs at `http://localhost:5173`.
+
+## Render deployment
+
+The frontend and backend currently live in separate sibling directories and should be deployed as separate Render services/repositories.
+
+### 1. Deploy the backend
+
+Use `../backend/render.yaml` as a Render Blueprint. Set:
+
+- `CAMPUS_TRACE_APP_URL` to the final frontend URL, without a trailing slash.
+- `CAMPUS_TRACE_CORS_ORIGINS` to the final frontend URL.
+- The `CAMPUS_TRACE_SMTP_*` values for the email provider.
+
+The Render disk stores SQLite data and uploaded item images under `/var/data`. The production service does not run the local seed script and therefore starts without demo cases.
+
+After the first deployment, create the initial administrator from a Render shell:
+
+```bash
+python main.py create-admin --super-admin
+```
+
+### 2. Deploy the frontend
+
+Use `render.yaml` in this directory as a Render Blueprint. Set:
+
+- `VITE_API_URL` to the deployed backend URL, without a trailing slash.
+
+The static-site rewrite in `render.yaml` and `public/_redirects` keeps React Router URLs working when opened directly.
+
+### Required production settings
+
+- Use generated secrets; never deploy the development secret.
+- Configure a persistent backend disk.
+- Use the exact HTTPS frontend origin for backend CORS.
+- Configure SMTP before testing claim decision emails.
+- Do not upload `campus_trace.db`, `uploads/`, or `.env`.

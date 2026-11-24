@@ -1,0 +1,134 @@
+Campus Trace Platform Description
+
+Campus Trace is a campus lost-and-found platform. It helps students, staff, and visitors report missing or found property while giving administrators a secure process for receiving items, verifying ownership, and recording returns.
+
+Public users do not need an account. Only administrators sign in.
+
+
+PUBLIC USER FLOWS
+
+1. Report a lost item
+
+- Open the “Report lost” page.
+- Enter the item description, where and when it was last seen, and private contact details.
+- Submit the report and keep the generated reference number.
+- Browse the public found-items catalogue while waiting for the item to be handed in.
+
+
+2. Report a found item
+
+- Open the “Report found” page.
+- Enter the item details, where and when it was found, and private contact details.
+- Upload between 3 and 5 clear images of the item. Each image must be a JPEG, PNG, or WebP file no larger than 5 MB.
+- Submit the report and keep the generated reference number.
+- Take the physical item to the campus lost-property desk.
+
+A found report does not immediately create a public listing. An administrator must physically receive and verify the item first. Uploaded images are available only to administrators.
+
+
+3. Browse found items
+
+- Open the “Found items” page.
+- Search or filter the catalogue.
+- Open a listing to view its public description, found location, and date.
+
+Public listings do not show the finder’s contact details, uploaded images, private notes, ownership questions, or claim evidence.
+
+
+4. Claim an item
+
+- Open the matching item listing.
+- Enter private contact details.
+- Explain how the item can be identified.
+- Answer the private ownership questions.
+- Submit the claim and keep the generated reference number.
+- Wait for an administrator to review the evidence.
+
+Submitting a claim does not authorize immediate collection.
+
+
+5. Collect an approved item
+
+- The claimant receives an email when the claim is approved, if email delivery is configured.
+- Follow the collection instructions from the lost-property desk.
+- Bring the requested identification and claim reference.
+- An administrator records the physical handover to complete the return.
+
+
+ADMINISTRATOR FLOWS
+
+1. Sign in
+
+- Open the administrator sign-in page.
+- Enter administrator credentials.
+- Use the dashboard to review reports, claims, notifications, and recent activity.
+
+
+2. Process a found report
+
+- Open the found-reports queue.
+- Review the finder’s report and uploaded images.
+- Wait until the physical item reaches the desk.
+- Confirm physical receipt.
+- Write a safe public description that does not reveal ownership evidence.
+- Add private ownership questions.
+- Save the item as a draft.
+- Review and publish the item to the public catalogue.
+
+
+3. Process a lost report
+
+- Open the lost-reports queue.
+- Review the missing-item description and private contact details.
+- Update the report when necessary.
+- Use the claim workflow to connect an owner with a matching received item.
+
+
+4. Review a claim
+
+- Open the claims queue.
+- Review the claimant’s private answers and identification details.
+- Approve the claim when the evidence is sufficient, or reject it with a reason.
+- Approval reserves the item for the verified claimant.
+- If configured, the platform sends the claimant an HTML approval email.
+
+
+5. Complete a return
+
+- Confirm that the approved claimant has arrived and provided the required evidence.
+- Hand over the physical item.
+- Record the return in Campus Trace.
+- The item and claim are marked as completed, and the action remains in the audit log.
+
+
+6. Generate QR codes
+
+- Open “QR Codes” from the administrator sidebar.
+- Choose a destination:
+  - Report a found item
+  - Report a lost item
+  - Browse and claim an item
+- Confirm the public website address.
+- Download the QR code as a PNG image.
+- Use it on posters, notices, or signs around campus.
+
+
+7. Manage administration
+
+- Review shared notifications and mark them as read.
+- Review activity logs for important report, receipt, publication, claim, decision, and return actions.
+- Super administrators can create, update, or deactivate administrator accounts.
+- Administrator accounts are deactivated rather than permanently deleted so historical records remain intact.
+
+
+PLATFORM LIFECYCLE
+
+Found report
+→ Physical receipt by an administrator
+→ Draft catalogue record
+→ Public listing
+→ Ownership claim
+→ Administrator decision
+→ Item reservation
+→ Physical handover
+→ Completed return
