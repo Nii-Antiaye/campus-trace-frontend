@@ -27,6 +27,11 @@ const columns = [
         cell: ({ cell }) => <StatusBadge status={cell.getValue()} />,
     },
     {
+        accessorKey: "published_at",
+        header: ({ header }) => <DataTableColumnHeader header={header} title="Visibility" />,
+        cell: ({ cell }) => <Badge variant={cell.getValue() ? "default" : "outline"}>{cell.getValue() ? "Published" : "Private"}</Badge>,
+    },
+    {
         accessorKey: "created_at",
         header: ({ header }) => <DataTableColumnHeader header={header} title="Reported" />,
         cell: ({ cell }) => <span className="font-heading text-xs text-muted-foreground">{formatDate(cell.getValue())}</span>,
@@ -43,7 +48,7 @@ export function LostReports() {
     const { data, error, isLoading, isValidating, mutate } = useSWR("/admin/reports/lost")
     return (
         <section className="flex flex-col gap-6">
-            <AdminPageHeader title="Lost reports" description="Track active searches and connect owners to matching published items." />
+            <AdminPageHeader title="Lost reports" description="Review owner reports before publishing approved searches to the public lost-items catalogue." />
             <DataTable
                 columns={columns}
                 data={data}
